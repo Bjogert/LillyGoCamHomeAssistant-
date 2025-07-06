@@ -1,22 +1,101 @@
-<h1 align = "center">✨ LilyGO Camera S3 ✨</h1>
+# LillyGoCam Home Assistant Integration
 
-## **English | [中文](README_CN.MD)**
+This is a custom firmware for the LillyGo T-Camera S3 with PIR and Voice detection, specifically designed for Home Assistant integration with custom OLED display features.
 
-## 1️⃣ Examples preview
+## Features
 
-````
-examples examples
-├─AllFunction                       # Full function test
-├─MinimalCameraExample              # Minimal camera example
-├─MinimalPowersExample              # Minimal PMU operation example
-├─MinimalScreenExample              # Minimal screen example
-├─MinimalSoundDetectionExample      # Minimal ambient sound detection example
-└─MinimalVoiceWakeupExample         # Minimal voice wakeup example
-````
+- **Custom OLED Display**: 
+  - Shows "Chicken Cam" on startup
+  - Displays WiFi signal strength
+  - Shows "SMILE!" message on PIR motion detection
+  - Clean, minimal display interface
 
-## 2️⃣ Quick Start
+- **Home Assistant Integration**: 
+  - Camera streaming
+  - Motion detection
+  - WiFi connectivity
+  - Web interface
 
-#### PlatformIO
+- **Hardware Support**:
+  - ESP32-S3 with camera
+  - PIR motion sensor
+  - OLED display (128x64)
+  - Voice detection (optional)
+  - Power management
+
+## Project Structure
+
+- `examples/AllFunction/` - Main firmware with all features
+- `examples/CustomOLEDText/` - Custom OLED text examples
+- `examples/SimpleCustomText/` - Simple text display examples
+- `examples/MinimalCameraExample/` - Basic camera functionality
+- `lib/` - Required libraries
+- `platformio.ini` - PlatformIO configuration
+
+## Getting Started
+
+1. Install [PlatformIO](https://platformio.org/)
+2. Clone this repository
+3. Copy `examples/AllFunction/secrets.h.example` to `examples/AllFunction/secrets.h`
+4. Edit `secrets.h` with your WiFi credentials
+5. Build and upload using PlatformIO
+
+## Configuration
+
+### WiFi Setup
+Edit `secrets.h` with your WiFi credentials:
+```cpp
+#define WIFI_SSID1 "your_wifi_name"
+#define WIFI_SSID_PASSWORD1 "your_wifi_password"
+```
+
+### Camera Settings
+The camera is configured for Home Assistant integration with web streaming capabilities.
+
+### OLED Display
+The display shows:
+- Boot message: "Chicken Cam" for 3 seconds
+- Rest mode: Only WiFi signal strength
+- Motion detection: "SMILE!" message
+
+## Building and Uploading
+
+```bash
+# Build the project
+pio run
+
+# Upload to device
+pio run -t upload
+
+# Monitor serial output
+pio device monitor
+```
+
+## Hardware Requirements
+
+- LillyGo T-Camera S3 with PIR and Voice
+- ESP32-S3 with PSRAM
+- OV2640 camera module
+- SSD1306 OLED display (128x64)
+- PIR motion sensor
+- Microphone (for voice detection)
+
+## Home Assistant Integration
+
+The device provides:
+- Camera stream at `http://[device_ip]/`
+- Motion detection events
+- WiFi status monitoring
+
+## License
+
+MIT License - Based on the original LillyGo examples with custom modifications for Home Assistant integration.
+
+## Credits
+
+- Original LillyGo T-Camera firmware
+- Custom OLED display modifications
+- Home Assistant integration features
 
 1. Install [VisualStudioCode](https://code.visualstudio.com/) and [Python](https://www.python.org/)
 2. Search for the `PlatformIO` plugin in the `VisualStudioCode` extension and install it.
