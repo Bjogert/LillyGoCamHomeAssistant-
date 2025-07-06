@@ -80,30 +80,16 @@ void setupScreen(screen_off_cb_t cb, bool camera)
         u8g2->setFontMode(1); // Transparent
         u8g2->setDrawColor(1);
         u8g2->setFontDirection(0);
-        u8g2->firstPage();
-        do {
-            u8g2->setFont(u8g2_font_inb19_mr);
-            u8g2->drawStr(0, 30, "LilyGo");
-            u8g2->drawHLine(2, 35, 47);
-            u8g2->drawHLine(3, 36, 47);
-            u8g2->drawVLine(45, 32, 12);
-            u8g2->drawVLine(46, 33, 12);
-            u8g2->setFont(u8g2_font_inb19_mf);
-            u8g2->drawStr(58, 60, "Cam");
-        } while ( u8g2->nextPage() );
-
-        u8g2->setFont(u8g2_font_fur11_tf);
-        if (camera) {
-            sensor_t *s = esp_camera_sensor_get();
-            if (s) {
-                camera_sensor_info_t *sinfo = esp_camera_sensor_get_info(&(s->id));
-                u8g2->drawStr(0, 58, sinfo->name);
-            }
-        } else {
-            u8g2->drawStr(0, 58, "N/A");
-        }
+        
+        // Show "Chicken Cam" only
+        u8g2->setFont(u8g2_font_inb19_mr);
+        u8g2->drawStr(10, 35, "Chicken Cam");
         u8g2->sendBuffer();
-        delay(5000);
+        delay(3000);  // Show for 3 seconds
+        
+        // After 3 seconds, clear screen (go to rest mode)
+        u8g2->clearBuffer();
+        u8g2->sendBuffer();
     }
 }
 
@@ -132,61 +118,70 @@ void setScreenStatus(bool en)
 
 void loopScreen(LilyGoTrigger trigger)
 {
-    static  bool screenTrigger = false;
-    static int16_t offset;
-    static int16_t len ;
-    static LilyGoTrigger lastTrigger;
+    static LilyGoTrigger lastTrigger = LILYGO_TRIGGER_FROM_NONE;
+    static unsigned long lastWiFiUpdate = 0;
+    static String lastSignalText = "";
 
     if (!u8g2) {
-        return ;
+        return;
     }
+    
     if (screenOff && trigger == LILYGO_TRIGGER_FROM_NONE) {
         return;
     }
 
-    if (strlen(buffer) == 0) {
-        u8g2->clearBuffer();
-
-        u8g2->setDrawColor(0);
-        u8g2->drawBox(0, 0, 128, 50);
-        u8g2->setDrawColor(1);
-        u8g2->setFont(u8g2_font_logisoso16_tr);
-        u8g2->drawStr(20, 30, "PirInvalid");
-        String ipAddress = getIpAddress();
-        if (ipAddress == "") {
-            Serial.println("Ipaddress is empty");
-            return;
-        }
-        snprintf(buffer, sizeof(buffer), "Camera Ready! Please connect to the hotspot, then open the browser and enter %s to connect", ipAddress.c_str());
-        offset   = -(int16_t)u8g2->getDisplayWidth();
-        len = strlen(buffer);
-    }
-
-
-    if (offset < len * 8 + 1) {
-        drawScrollString(offset, buffer);           // no clearBuffer required, screen will be partially cleared here
-    } else {
-        offset = -(int16_t)u8g2->getDisplayWidth();
-    }
-    offset += 2;
-
+    bool needsUpdate = false;
+    
+    // Check if trigger changed
     if (lastTrigger != trigger) {
         lastTrigger = trigger;
-        u8g2->setDrawColor(0);
-        u8g2->drawBox(0, 0, 128, 50);
-        u8g2->setDrawColor(1);
-        u8g2->setFont(u8g2_font_open_iconic_embedded_4x_t);
-        u8g2->drawGlyph(5, 42, 67);
-        u8g2->setFont(u8g2_font_timR10_tr);
-        if (trigger ==  LILYGO_TRIGGER_FROM_PIR) {
-            u8g2->drawStr(45, 35,  "Pir Trigger");
-        } else {
-            u8g2->drawStr(40, 35,  "Voice Trigger");
-
-
+        needsUpdate = true;
+        
+        // Clear the entire screen first
+        u8g2->clearBuffer();
+        
+        if (trigger == LILYGO_TRIGGER_FROM_PIR) {
+            // Show "SMILE!" message
+            u8g2->setFont(u8g2_font_logisoso16_tr);
+            u8g2->drawStr(45, 30, "SMILE!");
+        } else if (trigger != LILYGO_TRIGGER_FROM_NONE) {
+            // Voice trigger or other
+            u8g2->setFont(u8g2_font_open_iconic_embedded_4x_t);
+            u8g2->drawGlyph(5, 42, 67);
+            u8g2->setFont(u8g2_font_timR10_tr);
+            u8g2->drawStr(40, 35, "Voice Trigger");
         }
+        // If trigger is NONE, screen stays clear (rest mode)
     }
-    u8g2->sendBuffer();
+    
+    // Update WiFi signal every 5 seconds or when trigger changes
+    if (millis() - lastWiFiUpdate > 5000 || needsUpdate) {
+        int32_t rssi = WiFi.RSSI();
+        char signalText[16];
+        snprintf(signalText, sizeof(signalText), "WiFi:%ddBm", rssi);
+        
+        // Only update if text changed or we need a full update
+        if (strcmp(signalText, lastSignalText.c_str()) != 0 || needsUpdate) {
+            // Clear the bottom area for WiFi signal (make sure we clear enough space)
+            u8g2->setDrawColor(0);
+            u8g2->drawBox(0, 52, 128, 12);
+            u8g2->setDrawColor(1);
+            
+            // Draw new WiFi signal text
+            u8g2->setFont(u8g2_font_6x10_tf);
+            u8g2->drawStr(5, 62, signalText);
+            
+            lastSignalText = String(signalText);
+            needsUpdate = true;
+        }
+        
+        lastWiFiUpdate = millis();
+    }
+    
+    // Only send buffer if something changed
+    if (needsUpdate) {
+        u8g2->sendBuffer();
+    }
 }
 
 
