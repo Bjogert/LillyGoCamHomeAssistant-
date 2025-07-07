@@ -1,5 +1,3 @@
-
-
 /**
 
  * DEPENDENCIES - Files used by this main file:
@@ -53,17 +51,34 @@ void startCameraServer();
 void getWakeupReason();
 
 static LilyGoTrigger status = LILYGO_TRIGGER_FROM_NONE;
+static unsigned long pirTriggerTime = 0;
+static bool pirScreenHandled = false; // Flag to ensure screen is only activated once per trigger
+static const unsigned long PIR_DISPLAY_TIME = 3000; // Show "SMILE!" for 3 seconds
 
 void clearPheralsEvent()
 {
     status = LILYGO_TRIGGER_FROM_NONE;
+    pirTriggerTime = 0;
+    pirScreenHandled = false;
 }
 
 void pir_interrupt_event()
 {
-    // PIR motion detected - wake up screen
-    resetScreenTimer();
-    setScreenStatus(false);
+    // PIR motion detected - ONLY set flags in interrupt
+    // Do NOT call complex functions from interrupt context!
+    static unsigned long lastInterrupt = 0;
+    unsigned long currentTime = millis();
+    
+    // Debounce: ignore interrupts within 500ms
+    if (currentTime - lastInterrupt < 500) {
+        return;
+    }
+    lastInterrupt = currentTime;
+    
+    // Only set simple flags - no function calls!
+    status = LILYGO_TRIGGER_FROM_PIR;
+    pirTriggerTime = currentTime;
+    pirScreenHandled = false; // Reset flag for new trigger
 }
 
 
@@ -72,18 +87,40 @@ void loopPeripherals(void *ptr)
     pinMode(PIR_INPUT_PIN, INPUT);
     //Each state change will trigger an interrupt,
     //if you only want to trigger when a human body is sensed, change this to RISING
+    // PIR interrupt enabled - should work with new PWM servo control
     attachInterrupt(PIR_INPUT_PIN, pir_interrupt_event, CHANGE);
+    Serial.println("PIR interrupt enabled");
 
     // Initialize the external extension pins
     pinMode(EXTERN_PIN1, OUTPUT);
     pinMode(EXTERN_PIN2, OUTPUT);
 
     while (1) {
+        // Check if PIR trigger should be handled
+        if (status == LILYGO_TRIGGER_FROM_PIR && pirTriggerTime > 0) {
+            // Handle PIR trigger actions in main task (not interrupt) - only once per trigger
+            if (!pirScreenHandled) {
+                resetScreenTimer();
+                setScreenStatus(false);
+                pirScreenHandled = true;
+                Serial.println("PIR triggered - screen activated");
+            }
+            
+            // Clear trigger after display time
+            if (millis() - pirTriggerTime > PIR_DISPLAY_TIME) {
+                status = LILYGO_TRIGGER_FROM_NONE;
+                pirTriggerTime = 0;
+                pirScreenHandled = false;
+                Serial.println("PIR trigger cleared");
+            }
+        }
+        
         loopScreen(status);
         loopPower();
         loopNetwork();
         loopButton();
-        delay(8);
+        
+        delay(100);
     }
 }
 
@@ -104,14 +141,30 @@ void setup()
     // Initialize the board power parameters
     setupPower();
 
+    // Initialize I2C bus (shared between camera and power management)
+    Wire.begin(I2C_SDA, I2C_SCL);
+    Serial.println("I2C bus initialized");
+
+    // Give camera module time to stabilize after power-on
+    Serial.println("Waiting for camera module to stabilize...");
+    delay(2000);  // 2 second delay for camera power stabilization
+
     // Initialize the camera
+    Serial.println("Initializing camera...");
     ret = setupCamera();
 
     // Initialize the screen
     setupScreen(clearPheralsEvent, ret);
 
+    if (!ret) {
+        Serial.println("Camera initialization failed! Continuing without camera...");
+        Serial.println("Other functions (screen, PIR, power) should still work.");
+    }
+
     while (!ret) {
-        delay(1000);
+        Serial.println("Retrying camera initialization...");
+        delay(3000);
+        ret = setupCamera();
     }
 
     // Start button trigger, stand-alone will set camera resolution, long press will set sleep

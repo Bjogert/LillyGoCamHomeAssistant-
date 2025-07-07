@@ -144,12 +144,6 @@ void loopScreen(LilyGoTrigger trigger)
             // Show "SMILE!" message
             u8g2->setFont(u8g2_font_logisoso16_tr);
             u8g2->drawStr(45, 30, "SMILE!");
-        } else if (trigger != LILYGO_TRIGGER_FROM_NONE) {
-            // Voice trigger or other
-            u8g2->setFont(u8g2_font_open_iconic_embedded_4x_t);
-            u8g2->drawGlyph(5, 42, 67);
-            u8g2->setFont(u8g2_font_timR10_tr);
-            u8g2->drawStr(40, 35, "Voice Trigger");
         }
         // If trigger is NONE, screen stays clear (rest mode)
     }
