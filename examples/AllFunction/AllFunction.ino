@@ -1,10 +1,41 @@
+
+
 /**
- * @file      main.cpp
- * @author    Lewis He (lewishe@outlook.com)
- * @license   MIT
- * @copyright Copyright (c) 2022  Shenzhen Xin Yuan Electronic Technology Co., Ltd
- * @date      2022-09-16
- *
+
+ * DEPENDENCIES - Files used by this main file:
+ * 
+ * LOCAL HEADER FILES (in this folder):
+ * - screen.h/screen.cpp           - OLED display management
+ * - screen_custom.h/screen_custom.cpp - Custom screen layouts and UI
+ * - camera.h/camera.cpp           - Camera initialization and control
+ * - button.h/button.cpp           - Physical button handling
+ * - power.h/power.cpp             - Power management (PMU/battery)
+ * - network.h/network.cpp         - WiFi and network connectivity
+ * - server.h/server.cpp           - HTTP server for camera streaming
+ * - utilities.h                   - Pin definitions and hardware config
+ * - app_httpd.cpp                 - Alternative HTTP server implementation
+ * - camera_index.h                - HTML/CSS for camera web interface
+ * - secrets.h                     - WiFi credentials (create from secrets.h.example)
+ * 
+ * EXTERNAL LIBRARIES (in lib/ folder):
+ * - XPowersLib                    - AXP2101 power management IC
+ * - U8g2                          - OLED display driver
+ * - AceButton                     - Button debouncing and events
+ * - ESP32QRCodeReader             - QR code detection (if used)
+ * 
+ * SYSTEM CONFIGURATION:
+ * - platformio.ini                - Build configuration and compile flags
+ * - partitions.csv                - ESP32 memory partitioning
+ * 
+ * FEATURES ENABLED:
+ * - Camera streaming via HTTP server
+ * - OLED display with status information
+ * - PIR motion detection
+ * - Physical button controls
+ * - Power management and battery monitoring
+ * - WiFi connectivity (AP or Station mode)
+ * - Deep sleep functionality
+ * - Watchdog timer protection
  */
 
 #include "screen.h"
@@ -18,15 +49,7 @@
 #include "esp_camera.h"
 
 void startCameraServer();
-void setupVoiceWakeup();
 
-#ifdef  PLATFORMIO_ENV
-void setupSpeechRecognition();
-#else
-#warning "Voice wake-up does not support ArduinoIDE, only supports platformio , see README"
-#endif
-
-QueueHandle_t recVoice = NULL;
 void getWakeupReason();
 
 static LilyGoTrigger status = LILYGO_TRIGGER_FROM_NONE;
@@ -38,12 +61,9 @@ void clearPheralsEvent()
 
 void pir_interrupt_event()
 {
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    static uint8_t status = LILYGO_TRIGGER_FROM_PIR;
-    xQueueSendFromISR(recVoice, &status, &xHigherPriorityTaskWoken);
-    if ( xHigherPriorityTaskWoken ) {
-        portYIELD_FROM_ISR ();
-    }
+    // PIR motion detected - wake up screen
+    resetScreenTimer();
+    setScreenStatus(false);
 }
 
 
@@ -54,16 +74,11 @@ void loopPeripherals(void *ptr)
     //if you only want to trigger when a human body is sensed, change this to RISING
     attachInterrupt(PIR_INPUT_PIN, pir_interrupt_event, CHANGE);
 
-    // Initialize the external extension pin,
-    // and if "Hi, ESP" is triggered, the two pins will be reversed
+    // Initialize the external extension pins
     pinMode(EXTERN_PIN1, OUTPUT);
     pinMode(EXTERN_PIN2, OUTPUT);
 
     while (1) {
-        if (xQueueReceive(recVoice, &status, pdMS_TO_TICKS(2))) {
-            resetScreenTimer();
-            setScreenStatus(false);
-        }
         loopScreen(status);
         loopPower();
         loopNetwork();
@@ -75,8 +90,6 @@ void loopPeripherals(void *ptr)
 void setup()
 {
     bool ret = false;
-
-    recVoice = xQueueCreate(2, sizeof(uint8_t));
 
     Serial.begin(115200);
 
@@ -90,11 +103,6 @@ void setup()
 
     // Initialize the board power parameters
     setupPower();
-
-#ifdef  PLATFORMIO_ENV
-    //Activate the voice wake-up trigger, saying "Hi, ESP" into the microphone will trigger the screen wake-up
-    setupVoiceWakeup();
-#endif
 
     // Initialize the camera
     ret = setupCamera();

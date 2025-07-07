@@ -81,9 +81,9 @@ void setupScreen(screen_off_cb_t cb, bool camera)
         u8g2->setDrawColor(1);
         u8g2->setFontDirection(0);
         
-        // Show "Chicken Cam" only
+        // Show 
         u8g2->setFont(u8g2_font_inb19_mr);
-        u8g2->drawStr(10, 35, "Chicken Cam");
+        u8g2->drawStr(2, 35, "Kamera2");
         u8g2->sendBuffer();
         delay(3000);  // Show for 3 seconds
         
