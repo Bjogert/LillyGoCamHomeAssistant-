@@ -42,6 +42,7 @@
 #include "power.h"
 #include "network.h"
 #include "server.h"
+#include "mqtt.h"
 #include "utilities.h"
 #include "esp_task_wdt.h" // Add watchdog timer header
 #include "esp_camera.h"
@@ -173,6 +174,10 @@ void setup()
     // Start the network, use AP hotspot mode by default
     setupNetwork(USING_AP_MODE);
 
+    // Initialize MQTT for Home Assistant integration
+    setupMQTT();
+    Serial.println("MQTT initialized for Home Assistant integration");
+
     // Custom Transport Server
     setupServer();
 
@@ -197,7 +202,11 @@ void loop()
     // Reset watchdog timer
     esp_task_wdt_reset();
     
+    // Handle server requests
     loopServer();
+    
+    // Handle MQTT messages for camera control
+    loopMQTT();
     
     // Small delay to prevent tight loop
     delay(1);
