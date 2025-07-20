@@ -1,15 +1,11 @@
 #include "mqtt.h"
 #include "esp_camera.h"
 #include "secrets.h"
+#include "screen.h"  // Add screen.h for screen flip functionality
 #include <Arduino.h>
 #include <WiFi.h>
 
-// MQTT Configuration - Add these to your secrets.h
-const char* mqtt_server = MQTT_SERVER;         // Add to secrets.h: #define MQTT_SERVER "your.mqtt.server"
-const int mqtt_port = MQTT_PORT;               // Add to secrets.h: #define MQTT_PORT 1883
-const char* mqtt_user = MQTT_USER;             // Add to secrets.h: #define MQTT_USER "your_user"
-const char* mqtt_password = MQTT_PASSWORD;     // Add to secrets.h: #define MQTT_PASSWORD "your_pass"
-const char* mqtt_client_id = "lilygo_camera";
+// MQTT Configuration is now defined in secrets.h
 
 // MQTT Topics
 const char* mqtt_topic_frequency = "camera/frequency/set";
@@ -19,6 +15,7 @@ const char* mqtt_topic_contrast = "camera/contrast/set";
 const char* mqtt_topic_saturation = "camera/saturation/set";
 const char* mqtt_topic_vflip = "camera/vflip/set";
 const char* mqtt_topic_hmirror = "camera/hmirror/set";
+const char* mqtt_topic_screen_flip = "screen/flip/set";  // Add screen flip topic
 const char* mqtt_topic_status = "camera/status";
 
 WiFiClient wifiClient;
@@ -83,6 +80,19 @@ void onMqttMessage(char* topic, byte* payload, unsigned int length) {
         Serial.printf("   Mirror enable: %s\n", enable ? "true" : "false");
         setCameraHMirror(enable);
     }
+    // Handle screen flip control
+    else if (strcmp(topic, mqtt_topic_screen_flip) == 0) {
+        Serial.println("-> Processing screen flip command");
+        bool enable = (message == "1" || message.equalsIgnoreCase("true") || message.equalsIgnoreCase("on"));
+        Serial.printf("   Screen flip enable: %s\n", enable ? "true" : "false");
+        setScreenFlip(enable);
+        
+        // Publish status back to MQTT
+        if (mqttConnected && mqttClient.connected()) {
+            String response = "{\"screen_flip\":" + String(enable ? "true" : "false") + ",\"status\":\"success\"}";
+            mqttClient.publish("screen/flip/status", response.c_str());
+        }
+    }
     else {
         Serial.println("-> WARNING: Unknown MQTT topic received!");
         Serial.printf("   Topic: %s\n", topic);
@@ -133,6 +143,9 @@ void loopMQTT() {
                 
                 mqttClient.subscribe(mqtt_topic_hmirror);
                 Serial.printf("  - %s\n", mqtt_topic_hmirror);
+                
+                mqttClient.subscribe(mqtt_topic_screen_flip);
+                Serial.printf("  - %s\n", mqtt_topic_screen_flip);
                 
                 Serial.println("✓ All subscriptions complete");
                 Serial.println("============================================");

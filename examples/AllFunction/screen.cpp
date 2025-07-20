@@ -178,6 +178,35 @@ void loopScreen(LilyGoTrigger trigger)
     }
 }
 
+void setScreenFlip(bool enable) {
+    if (!u8g2) {
+        Serial.println("ERROR: Screen not initialized");
+        return;
+    }
+    
+    Serial.printf("Setting screen flip to %s\n", enable ? "enabled (180°)" : "disabled (normal)");
+    
+    // U8g2 setFlipMode: 0 = normal, 1 = 180° rotation
+    u8g2->setFlipMode(enable ? 1 : 0);
+    
+    // Force screen refresh to show the flip immediately
+    u8g2->clearBuffer();
+    
+    // Redraw current content
+    u8g2->setFont(u8g2_font_6x10_tf);
+    u8g2->drawStr(5, 15, enable ? "Screen: Flipped" : "Screen: Normal");
+    
+    // Show WiFi status
+    int32_t rssi = WiFi.RSSI();
+    char signalText[16];
+    snprintf(signalText, sizeof(signalText), "WiFi:%ddBm", rssi);
+    u8g2->drawStr(5, 62, signalText);
+    
+    u8g2->sendBuffer();
+    
+    Serial.printf("✓ Screen flip %s\n", enable ? "enabled (180°)" : "disabled (normal)");
+}
+
 
 
 

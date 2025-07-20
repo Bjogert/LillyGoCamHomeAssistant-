@@ -3,6 +3,7 @@
 script
 build
 secrets.h
+secrets.cpp
 
 # Additional security files
 *.pem

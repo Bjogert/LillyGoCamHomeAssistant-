@@ -4,14 +4,7 @@
 #include <WiFiClient.h>
 #include <PubSubClient.h>
 
-// MQTT Configuration
-extern const char* mqtt_server;
-extern const int mqtt_port;
-extern const char* mqtt_user;
-extern const char* mqtt_password;
-extern const char* mqtt_client_id;
-
-// MQTT Topics
+// MQTT Topics - defined in mqtt.cpp
 extern const char* mqtt_topic_frequency;
 extern const char* mqtt_topic_quality;
 extern const char* mqtt_topic_brightness;
@@ -19,6 +12,7 @@ extern const char* mqtt_topic_contrast;
 extern const char* mqtt_topic_saturation;
 extern const char* mqtt_topic_vflip;
 extern const char* mqtt_topic_hmirror;
+extern const char* mqtt_topic_screen_flip;  // Add screen flip topic
 extern const char* mqtt_topic_status;
 
 // Function declarations

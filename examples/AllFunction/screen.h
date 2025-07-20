@@ -30,6 +30,7 @@ void loopScreen(LilyGoTrigger trigger);
 void setScreenStatus(bool en);
 void resetScreenTimer();
 void startScreenTimer();
+void setScreenFlip(bool enable);  // Add screen flip function
 
 
 
